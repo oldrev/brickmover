@@ -166,6 +166,7 @@ class BtcChinaExchange:
         _logger.info('准备开始请求 btcchina.com 帐号信息')
         ticker = self.request_ticker()
         ai = self._btcchina.get_account_info()
+        print ai
         account_info = AccountInfo(BtcChinaExchange.Name, ticker, 
                 self.trade_fee,
                 float(ai['balance']['cny']['amount']), 

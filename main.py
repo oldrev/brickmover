@@ -157,6 +157,8 @@ def main_loop(stop_event):
         trader = Trader()
         while not stop_event.is_set():
             s = advisor.evaluate()        
+            if stop_event.is_set():
+                break;
             if s != None and s.can_go:
                 trader.trade(s)
                 trader.make_balance()
