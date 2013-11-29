@@ -7,8 +7,10 @@ import cookielib
 import urllib, urllib2
 import random
 import logging
-from HTMLParser import HTMLParser
 import os
+from BeautifulSoup import BeautifulSoup
+import lxml.html
+import lxml.etree
 
 from info import *
 import config
@@ -16,40 +18,22 @@ import btcchina
 
 _logger = logging.getLogger('exchanges')
 
-class AbstractHtmlParser(HTMLParser):
+class OKCoinBtcDepositParser():
     def __init__(self):
-        HTMLParser.__init__(self) 
-
-    def try_get_attr(self, attrs, attr_name):        
-        for e in attrs:
-            if e[0] == attr_name:
-                return e[1]
-        return None
-
-class OKCoinBtcDepositParser(AbstractHtmlParser):
-    def __init__(self):
-        AbstractHtmlParser.__init__(self) 
+        self.btc_deposit_address_path = '//div[@class="fincoinaddress-1"]/span'
+        self.money_balance_path = '//div[@class="accountinfo1"]/div/ul/li[2]/span[2]'
+        self.btc_balance_path = '//div[@class="accountinfo1"]/div/ul/li[3]/span[2]'
         self.btc_deposit_address = None
-        self.in_address_div = False
-        self.in_address_span = False
+        self.money_balance = 0.0
+        self.btc_balance = 0.0
+        self.soup = None
 
-    def handle_starttag(self, tag, attrs):
-        if tag=='div' and attrs:
-            attr = self.try_get_attr(attrs, 'class')
-            if attr and attr == 'fincoinaddress-1':
-                self.in_address_div = True
-        if tag=='span' and self.in_address_div:
-            self.in_address_span = True
+    def parse(self, html):
+        tree = lxml.html.document_fromstring(html)
+        self.btc_deposit_address = tree.xpath(self.btc_deposit_address_path)[0].text
+        self.money_balance = float(tree.xpath(self.money_balance_path)[0].text)
+        self.btc_balance = float(tree.xpath(self.btc_balance_path)[0].text)
 
-    def handle_endtag(self, tag):
-        if self.in_address_span and tag == 'span':
-            self.in_address_span = False
-        if self.in_address_div and tag == 'div':
-            self.in_address_div = False
-
-    def handle_data(self, data):
-        if self.in_address_span:
-            self.btc_deposit_address = data
 
 class OKCoinExchange:
     Name = 'okcoin'
@@ -64,8 +48,8 @@ class OKCoinExchange:
         self.cookie_file = os.path.join(config.configuration['data_path'], 'okcoin.cookies')
         self.cookieJar = cookielib.MozillaCookieJar(self.cookie_file)
         # user provided username and password
-        self.username = self._config['access_key']
-        self.password = self._config['secret_key']
+        self.username = self._config['user_name']
+        self.password = self._config['password']
         # set up opener to handle cookies, redirects etc
         self.opener = urllib2.build_opener(
             urllib2.HTTPRedirectHandler(),
@@ -132,19 +116,19 @@ class OKCoinExchange:
     def request_info(self):
         _logger.info('准备开始请求 okcoin.com 帐号信息')
         ticker = self.request_ticker()
-        #self.login()
-        #response = self.opener.open('https://www.okcoin.com/rechargeBtc.do')
-        #parser = OKCoinBtcDepositParser()
-        #parser.feed(response.read())        
-        #btc_deposit_address = '' parser.btc_deposit_address
-        #response.close()
+        self.login()
+        response = self.opener.open('https://www.okcoin.com/rechargeBtc.do')
+        parser = OKCoinBtcDepositParser()
+        html = response.read()
+        parser.parse(html)        
+        btc_deposit_address = parser.btc_deposit_address
+        response.close()
         #withdraw_btc_addr = '17Ar3q9Bkfz7i6RhTJcobgnYw6gNVfE4JE'
         #withdraw_amount = '0.1'
         #type = 1
         #symbol='btc'
         #self._send_sms_code(type, withdraw_amount, withdraw_btc_addr, symbol)
-        btc_deposit_address = ''
-        return AccountInfo(OKCoinExchange.Name, ticker, self.trade_fee, 0, 0, btc_deposit_address)
+        return AccountInfo(OKCoinExchange.Name, ticker, self.trade_fee, parser.money_balance, parser.btc_balance, btc_deposit_address)
 
     def withdraw_stock(self, amount, address):
         pass
