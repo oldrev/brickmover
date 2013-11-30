@@ -1,20 +1,32 @@
 {
-    "data_path": "d:\\tmp\\brickmover",
+    "data_path": "/home/oldrev/tmp/brickmover",
+    "is_simulation": true,
     "exchanges": {
         "btcchina": {
             "access_key": "",
             "secret_key": "" ,
+            "user_name": "",
+            "password": "",
+            "trade_password": "",
             "trade_fee": 0.0
         },
 
         "okcoin": {
             "access_key": "",
             "secret_key": "",
+            "user_name": "",
+            "password": "",
+            "trade_password": "",
             "trade_fee": 0.0
         }
     },
 
+    "wallet": {
+        "uerid": "",
+        "password": ""
+    },
+
     "qty_per_order": 0.01,
-    "profit_rate_threshold": 0.02,
+    "profit_rate_threshold": 0.01,
     "trade_interval": 45
 }

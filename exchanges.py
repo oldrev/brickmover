@@ -8,7 +8,6 @@ import urllib, urllib2
 import random
 import logging
 import os
-from BeautifulSoup import BeautifulSoup
 import lxml.html
 import lxml.etree
 
