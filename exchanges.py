@@ -59,7 +59,7 @@ class OKCoinExchange:
         )
         # pretend we're a web browser and not a python script
         self.opener.addheaders = [('User-agent', 
-            ('Mozilla/4.0 (compatible; MSIE 6.0; '
+            ('Mozilla/4.0 (compatible; MSIE 10.0; '
             'Windows NT 5.2; .NET CLR 1.1.4322)'))
         ]
 
@@ -147,12 +147,61 @@ class BtcChinaExchange:
 
     def __init__(self):
         self._config = config.configuration['exchanges'][BtcChinaExchange.Name]
+        self._last_logged_time = None
+        self.username = self._config['user_name']
+        self.password = self._config['password']
+        self.cookie_file = os.path.join(config.configuration['data_path'], 'btcchina.cookies')
+        self.cookieJar = cookielib.MozillaCookieJar(self.cookie_file)
         self.trade_fee = self._config['trade_fee']
         access = self._config['access_key'].encode('utf-8')
         secret = self._config['secret_key'].encode('utf-8')
         self._btcchina = btcchina.BtcChinaInterface(access, secret)
+        # set up opener to handle cookies, redirects etc
+        self.opener = urllib2.build_opener(
+            urllib2.HTTPRedirectHandler(),
+            urllib2.HTTPHandler(debuglevel=0),
+            urllib2.HTTPSHandler(debuglevel=0),
+            urllib2.HTTPCookieProcessor(self.cookieJar)
+        )
+        # pretend we're a web browser and not a python script
+        self.opener.addheaders = [('User-agent', 
+            ('Mozilla/4.0 (compatible; MSIE 10.0; '
+            'Windows NT 5.2; .NET CLR 1.1.4322)'))
+        ]
+
+    def _send_vcode(self):
+        self.login()
+        response = self.opener.open('https://vip.btcchina.com/account/withdraw.btc')
+        html = response.read()
+        tree = lxml.html.document_fromstring(html)
+        #vcode_hidden = tree.xpath('//input[@id="vcode_id"]')
+        vcode_hidden = tree.xpath('//input')
+        print "######"
+        print vcode_hidden
+        response.close()
+        pass
 
     def login(self):
+        '''
+        
+        if self._last_logged_time and ((datetime.datetime.now() - self._last_logged_time).total_seconds() < BtcChinaExchange.session_period * 60):
+            return
+        base_url = 'https://vip.btcchina.com'
+        self._last_logged_time = datetime.datetime.now()
+        #open the front page of the website to set and save initial cookies
+        login_url = base_url + '/bbs/ucp.php?mode=login'
+        response = self.opener.open(login_url)
+        self.cookieJar.save()
+        response.close()
+        login_data = urllib.urlencode({
+            'username' : self.username,
+            'password' : self.password,
+            'redirect' : '/trade',
+        })
+        response = self.opener.open(login_url, login_data)
+        self.cookieJar.save()
+        response.close()
+        '''
         pass
 
     def request_ticker(self):
@@ -164,6 +213,8 @@ class BtcChinaExchange:
 
     def request_info(self):
         _logger.info('准备开始请求 btcchina.com 帐号信息')
+        self.login()
+        self._send_vcode()
         ticker = self.request_ticker()
         ai = self._btcchina.get_account_info()
         print ai

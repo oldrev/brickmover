@@ -165,8 +165,8 @@ def main_loop(stop_event):
                 print '\n'
             else:
                 print 'Bad time to trade, just wait a moment...'
-                time.sleep(10)
             print '----------------------------------------------------'                
+            time.sleep(10)
     except:
         pass
     finally:
