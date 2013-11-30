@@ -76,8 +76,7 @@ class BtcChinaInterface():
                     return resp_dict['error']
         else:
             # not great error handling....
-            print "status:",response.status
-            print "reason:".response.reason
+            raise IOError('Request error')
  
         return None
  

@@ -18,11 +18,13 @@ SATOSHI_PER_BTC = 100000000
 
 class Wallet:
     __base_url = 'https://blockchain.info/zh-cn/merchant'    
+    __timeout = 30
     
     def __init__(self):
         self._config = config.configuration['wallet']
         self.userid = self._config['userid']
         self.password = self._config['password']
+        self.transfer_fee = 0.0005
 
     def balance(self):
         '''URL:
@@ -30,7 +32,7 @@ class Wallet:
         '''
         url = '{0}/{1}/balance?password={2}'.format(Wallet.__base_url, self.userid, self.password)
         request = urllib2.Request(url)
-        response = urllib2.urlopen(request)
+        response = urllib2.urlopen(request, timeout=Wallet.__timeout)
         balance_data = json.loads(response.read())
         response.close()
         return float(balance_data['balance']) / float(SATOSHI_PER_BTC)
@@ -44,7 +46,7 @@ class Wallet:
         url = '{0}/{1}/payment?password={2}&to={3}&amount={4}'.format(
                 Wallet.__base_url, self.userid, self.password, address, satoshi)
         request = urllib2.Request(url)
-        response = urllib2.urlopen(request)
+        response = urllib2.urlopen(request, timeout=Wallet.__timeout)
         response_data = json.loads(response.read())
         response.close()
         return response_data['tx_hash']

@@ -22,6 +22,29 @@ class SmsMessage(BaseModel):
     def __repr__(self):
         return "SmsMessage(%r, %r, %r)" % (self.arrived_time, self.mobile, self.content)
 
+
+class TradeLead(BaseModel):
+    __tablename__ = 'trade_leads'
+    id = Column(Integer, primary_key=True)
+    created_time = Column(DateTime, nullable=False)
+    exchange_to_buy = Column(String(32), nullable=False)
+    exchange_to_sell = Column(String(32), nullable=False)
+    buy_price = Column(Float, nullable=False)
+    sell_price = Column(Float, nullable=False)
+ 
+    def __init__(self, buy_exchange, buy_price, sell_exchange, sell_price):
+        self.created_time = datetime.datetime.now()
+        self.exchange_to_buy = buy_exchange
+        self.buy_price = buy_price
+        self.exchange_to_sell = sell_exchange
+        self.sell_price = sell_price
+
+    @staticmethod
+    def last():
+        session = Session()
+        o = session.query(TradeLead).order_by(TradeLead.created_time.desc()).first()
+        return o
+
  
 class Order(BaseModel):
     __tablename__ = 'orders'

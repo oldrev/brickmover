@@ -16,7 +16,9 @@ class Ticker:
 
 
 class AccountInfo:
-    def __init__(self, name, ticker, trade_fee, money_balance, stock_balance, stock_deposit_address):
+    def __init__(self, 
+            name, ticker, trade_fee, 
+            money_balance, stock_balance, stock_deposit_address):
         assert name
         assert ticker
         self.name = name
@@ -28,9 +30,9 @@ class AccountInfo:
             
 
 class Suggestion:
-    def __init__(self, can_go, exchange_to_buy, exchange_to_sell, buy_price, sell_price, stock_qty):
-        self.exchange_to_sell = exchange_to_sell
-        self.exchange_to_buy = exchange_to_buy
+    def __init__(self, can_go, buy_account, sell_account, buy_price, sell_price, stock_qty):
+        self.buy_account = buy_account
+        self.sell_account = sell_account
         self.buy_price = buy_price
         self.sell_price = sell_price
         self.stock_qty = stock_qty 

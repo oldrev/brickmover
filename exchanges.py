@@ -17,6 +17,7 @@ import btcchina
 
 _logger = logging.getLogger('exchanges')
 
+
 class OKCoinBtcDepositParser():
     def __init__(self):
         self.btc_deposit_address_path = '//div[@class="fincoinaddress-1"]/span'
@@ -42,6 +43,7 @@ class OKCoinExchange:
 
     def __init__(self):
         self._config = config.configuration['exchanges'][OKCoinExchange.Name]
+        self.stock_withdraw_fee = 0.0001
         self.trade_fee = self._config['trade_fee']
         self._last_logged_time = None
         self.cookie_file = os.path.join(config.configuration['data_path'], 'okcoin.cookies')
@@ -176,6 +178,7 @@ class BtcChinaExchange:
     def __init__(self):
         self._config = config.configuration['exchanges'][BtcChinaExchange.Name]
         self._last_logged_time = None
+        self.stock_withdraw_fee = 0.0001
         self.username = self._config['user_name']
         self.password = self._config['password']
         self.cookie_file = os.path.join(config.configuration['data_path'], 'btcchina.cookies')
@@ -242,10 +245,8 @@ class BtcChinaExchange:
     def request_info(self):
         _logger.info('准备开始请求 btcchina.com 帐号信息')
         self.login()
-        self._send_vcode()
         ticker = self.request_ticker()
         ai = self._btcchina.get_account_info()
-        print ai
         account_info = AccountInfo(BtcChinaExchange.Name, ticker, 
                 self.trade_fee,
                 float(ai['balance']['cny']['amount']), 
