@@ -49,6 +49,7 @@ class OKCoinExchange:
         # user provided username and password
         self.username = self._config['user_name']
         self.password = self._config['password']
+        self.trade_password = self._config['trade_password']
         # set up opener to handle cookies, redirects etc
         self.opener = urllib2.build_opener(
             urllib2.HTTPRedirectHandler(),
@@ -129,14 +130,42 @@ class OKCoinExchange:
         #self._send_sms_code(type, withdraw_amount, withdraw_btc_addr, symbol)
         return AccountInfo(OKCoinExchange.Name, ticker, self.trade_fee, parser.money_balance, parser.btc_balance, btc_deposit_address)
 
-    def withdraw_stock(self, amount, address):
-        pass
+    def withdraw_stock(self, amount):
+        trade_data = urllib.urlencode({
+            'withdrawAddr': '',
+            'withdrawAmount': amount,
+            'tradePwd': self.trade_password,
+            'validateCode': '',
+            'symbol': 0,
+        })
+        action = '/account/withdrawBtcSubmit.do'
+        url = self._make_post_url(action)
+        response = self.opener.open(url, trade_data)
+        response.close()
 
     def buy(self, stock_qty, price):
-        pass
+        trade_data = urllib.urlencode({
+            'tradeAmount': stock_qty,
+            'tradeCnyPrice': price,
+            'tradePwd': self.trade_password,
+            'symbol': 0,
+        })
+        action = '/trade/buyBtcSubmit.do'
+        url = self._make_post_url(action)
+        response = self.opener.open(url, trade_data)
+        response.close()
 
     def sell(self, stock_qty, price):
-        pass
+        trade_data = urllib.urlencode({
+            'tradeAmount': stock_qty,
+            'tradeCnyPrice': price,
+            'tradePwd': self.trade_password,
+            'symbol': 0,
+        })
+        action = '/trade/sellBtcSubmit.do'
+        url = self._make_post_url(action)
+        response = self.opener.open(url, trade_data)
+        response.close()
 
 
 class BtcChinaExchange:
@@ -224,11 +253,11 @@ class BtcChinaExchange:
                 ai['profile']['btc_deposit_address'])
         return account_info
 
-    def withdraw_stock(self, amount, address):
-        pass
+    def withdraw_stock(self, amount):
+        self._btcchina.request_withdrawal('btc', amount)
 
     def buy(self, stock_qty, price):
-        pass
+        self._btcchina.buy(price, stock_qty)
 
     def sell(self, stock_qty, price):
-        pass
+        self._btcchina.sell(price, stock_qty)
