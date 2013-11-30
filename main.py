@@ -33,7 +33,7 @@ class Trader:
         s = self.current_suggestion
         session = models.Session()
         order = models.Order(s.buy_account.name, s.buy_price, 
-                s.sell_account.name, s.sell_price, s.stock_qty)
+                    s.sell_account.name, s.sell_price, s.stock_qty)
         try:
             session.add(order)
             session.commit()
@@ -47,6 +47,18 @@ class Trader:
         #TODO 并行化处理
         self._make_sell_order()
         self._make_buy_order()
+        self._check_order_state()
+
+    def _check_order_state(self):
+        session = models.Session()
+        try:
+            if self.current_order.is_bought and self.current_order.is_sold:
+                self.current_order.state = 'done'
+                print '[TRADER] The order is done!'
+            session.commit()
+        except:
+            session.rollback()
+
 
     def _make_buy_order(self):
         buy_ex = Trader._exchanges[self.current_suggestion.buy_account.name]
@@ -109,26 +121,42 @@ class Cashier:
         wallet_balance = self.wallet.balance()        
         for a in accounts:
             if a.stock_balance < self.qty_per_order and wallet_balance > self.qty_per_order:
+                print '[CASHIER]\t\t Transfering BTC from wallet to account "{0}", qty={1}'\
+                        .format(a.name, self.qty_per_order)
                 self.wallet.withdraw(a.stock_deposit_address, self.qty_per_order)
                 wallet_balance -= self.qty_per_order
 
 
+def wait_event(event, seconds):
+    for i in xrange(0, seconds):
+        if stop_event.is_set():
+            break            
+        time.sleep(1)
+
 def main_loop(stop_event):
     the_advisor = Advisor()
     trader = Trader()
+    cashier = Cashier()
+
     try:
         while not stop_event.is_set():
-            s = the_advisor.evaluate()        
+            accounts = the_advisor.request_accounts_info()
+
+            #cashier.make_balance(accounts)
+
+            s = the_advisor.evaluate(accounts)
             if stop_event.is_set():
                 break;
             if s != None and s.can_go:
+                print 'trader()'
                 trader.trade(s)
-                trader.post_transfers()
+                print 'post_transfers()'
+                #trader.post_transfers()
                 print '\n'
             else:
                 print 'Bad time to trade, just wait a moment...'
             print '----------------------------------------------------'                
-            time.sleep(5)
+            wait_event(stop_event, seconds)
     except:
         pass
     finally:

@@ -63,10 +63,9 @@ class Advisor:
             print e
             session.rollback()
 
-    def evaluate(self):
+    def evaluate(self, accounts):
         try:
-            s = self._do_evaluate()
-            return s
+            return self._do_evaluate(accounts)
         except IOError as e:
             print 'Network Error'
             print e
@@ -75,8 +74,7 @@ class Advisor:
             print e
             return None
 
-    def _do_evaluate(self):
-        accounts = self.request_accounts_info()
+    def _do_evaluate(self, accounts):
         #检查交易所账户余额 
         for a in accounts:
             if a.stock_balance < self.qty_per_order:
@@ -92,10 +90,11 @@ class Advisor:
         sell_price_rate = 0.999
         buy_price = round(buy_account.ticker.buy_price * buy_price_rate, 2)
         sell_price = round(sell_account.ticker.buy_price * sell_price_rate, 2)
+        sell_price = 10000
         buy_amount = buy_price * self.qty_per_order
         sell_amount = round(sell_price * self.qty_per_order, 2)
-        wallet_transfer_fee_amount = buy_price * self.wallet.transfer_fee + buy_price * 0.0001
-        trade_fee_amount = buy_amount * buy_account.trade_fee + sell_amount * sell_account.trade_fee
+        wallet_transfer_fee_amount = round(buy_price * self.wallet.transfer_fee + buy_price * 0.0001, 2)
+        trade_fee_amount = round(buy_amount * buy_account.trade_fee + sell_amount * sell_account.trade_fee, 2)
         gross_profit = round(sell_amount - buy_amount, 2)
         net_profit = round(sell_amount - buy_amount - wallet_transfer_fee_amount - trade_fee_amount, 2)
         profit_rate = net_profit / buy_amount
@@ -104,15 +103,12 @@ class Advisor:
                 round(threshold * 100, 4), gross_profit, net_profit, round(profit_rate * 100, 4))
         print '\tbuy_price={0}\tbuy_amount={1}\tsell_price={2}\tsell_amount={3}'.format(buy_price, buy_amount, sell_price, sell_amount)
         print '\twallet_fee={0}\ttrade_fee={1}'.format(wallet_transfer_fee_amount, trade_fee_amount)
-        last_order = models.Order.last()
-        is_last_order_finished = (last_order == None or (last_order.state == 'done' or last_order.state == 'cancel'))
-        can_go = profit_rate > threshold and net_profit > 0.01 
+        can_go = profit_rate > threshold and net_profit > 0.01 #and net_profit < 0.05
         if can_go:
             self._record_trade_lead(
                     buy_account.name, buy_account.ticker.buy_price, 
                     sell_account.name, sell_account.ticker.sell_price)
 
-        can_go = can_go and is_last_order_finished    
         s = Suggestion(can_go, buy_account, sell_account, buy_price, sell_price, self.qty_per_order)
         if s.can_go:
             print '[ADVISOR]\tI FOUND A TRADE CHANCE:    TRADE IT NOW!!!'
