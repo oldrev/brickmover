@@ -90,7 +90,6 @@ class Advisor:
         sell_price_rate = 0.999
         buy_price = round(buy_account.ticker.buy_price * buy_price_rate, 2)
         sell_price = round(sell_account.ticker.buy_price * sell_price_rate, 2)
-        sell_price = 10000
         buy_amount = buy_price * self.qty_per_order
         sell_amount = round(sell_price * self.qty_per_order, 2)
         wallet_transfer_fee_amount = round(buy_price * self.wallet.transfer_fee + buy_price * 0.0001, 2)

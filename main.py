@@ -156,7 +156,7 @@ def main_loop(stop_event):
             else:
                 print 'Bad time to trade, just wait a moment...'
             print '----------------------------------------------------'                
-            wait_event(stop_event, seconds)
+            wait_event(stop_event, 60)
     except:
         pass
     finally:
