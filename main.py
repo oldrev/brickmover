@@ -4,6 +4,7 @@
 import time
 import datetime
 import multiprocessing as mp
+import logging
 
 from info import *
 from exchanges import BtcChinaExchange, OKCoinExchange
@@ -11,6 +12,8 @@ import config
 import models
 from advisor import Advisor
 from wallet import Wallet
+
+_logger = logging.getLogger(__name__)
 
 
 class Trader:
@@ -54,8 +57,8 @@ class Trader:
         try:
             if self.current_order.is_bought and self.current_order.is_sold:
                 self.current_order.state = 'done'
-                print '[TRADER] The order is done!'
-            session.commit()
+                _logger.info('[TRADER] The order is done!')
+                session.commit()
         except:
             session.rollback()
 
@@ -68,7 +71,7 @@ class Trader:
             self.current_order.bought_time = datetime.datetime.now()
             self.current_order.is_bought = True
             session.commit()
-            print 'Buy Order made: ', self.current_order.bought_time
+            _logger.info('Buy Order made: {0}'.format(self.current_order.bought_time))
         except:
             session.rollback()
 
@@ -80,13 +83,13 @@ class Trader:
             self.current_order.sold_time = datetime.datetime.now()
             self.current_order.is_sold = True
             session.commit()
-            print 'Sell Order made: ', self.current_order.sold_time
+            _logger.info('Sell Order made: {0}'.format(self.current_order.sold_time))
         except:
             session.rollback()
 
     
     def _wait_balance(self):
-        print 'Waitig for balance...'
+        _logger.info('Waitig for balance...')
         time.sleep(1)
 
     def _wait_sms(self):
@@ -121,15 +124,15 @@ class Cashier:
         wallet_balance = self.wallet.balance()        
         for a in accounts:
             if a.stock_balance < self.qty_per_order and wallet_balance > self.qty_per_order:
-                print '[CASHIER]\t\t Transfering BTC from wallet to account "{0}", qty={1}'\
-                        .format(a.name, self.qty_per_order)
+                _logger.info('[CASHIER]\t\t Transfering BTC from wallet to account "{0}", qty={1}'
+                        .format(a.name, self.qty_per_order))
                 self.wallet.withdraw(a.stock_deposit_address, self.qty_per_order)
                 wallet_balance -= self.qty_per_order
 
 
 def wait_event(event, seconds):
     for i in xrange(0, seconds):
-        if stop_event.is_set():
+        if event.is_set():
             break            
         time.sleep(1)
 
@@ -140,6 +143,7 @@ def main_loop(stop_event):
 
     try:
         while not stop_event.is_set():
+            _logger.info(u'--------------------------- 交易处理开始 ---------------------------')
             accounts = the_advisor.request_accounts_info()
 
             #cashier.make_balance(accounts)
@@ -154,8 +158,7 @@ def main_loop(stop_event):
                 #trader.post_transfers()
                 print '\n'
             else:
-                print 'Bad time to trade, just wait a moment...'
-            print '----------------------------------------------------'                
+                _logger.info(u'交易条件不具备，等上一会儿....')
             wait_event(stop_event, 60)
     except:
         pass
@@ -176,7 +179,8 @@ if __name__ == '__main__':
     cmd = ''
     while cmd != 'quit':
         cmd = raw_input("Type 'quit' to end: ")
-    print 'Preparing to stop main loop process...'
+    _logger.info('Preparing to stop main loop process...')
     stop_main_event.set()
     main_loop_process.join()
+    _logger.info(u'程序已经成功停止')
     print 'All done. Bye.'

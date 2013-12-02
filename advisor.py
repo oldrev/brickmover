@@ -4,6 +4,7 @@
 import time
 import datetime
 import multiprocessing as mp
+import logging
 
 from info import *
 from exchanges import BtcChinaExchange, OKCoinExchange
@@ -11,14 +12,16 @@ import config
 import models
 from wallet import Wallet
 
+
 def _polled_request_account_info(k):
     try:
-        print 'requesting exchange info...', k
+        _logger = logging.getLogger(__name__)
+        _logger.debug('Requesting exchange info...' + k)
         ai = Advisor._exchanges[k].request_info()
-        print 'done'
+        _logger.debug(k + ' finished')
         return ai
     except IOError as e:
-        print e
+        _logger.error(e)
         return None
 
 class Advisor:
@@ -28,6 +31,7 @@ class Advisor:
     }
 
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         self.wallet = Wallet()
         self._pool = mp.Pool(2)
         self.qty_per_order = config.configuration['qty_per_order']
@@ -38,19 +42,19 @@ class Advisor:
         self._pool = None
 
     def request_accounts_info(self):
-        print 'Requesting all accounts info...'
+        self._logger.info('Requesting all accounts info...')
         accounts = self._pool.map(_polled_request_account_info, Advisor._exchanges)        
         #accounts = map(_polled_request_account_info, Advisor._exchanges)        
         for a in accounts:
             if a == None:
-                print 'ERROR: Failed to request account info'
+                self._logger.info('ERROR: Failed to request account info')
                 raise RuntimeError('Failed to request account info')
         #accounts = map(_polled_request_account_info, Advisor._exchanges)        
-        print 'All Accounts info accquired'
-        print 'ACCOUNT INFO:'
+        self._logger.info('All Accounts info accquired')
+        self._logger.debug('ACCOUNT INFO:')
         for a in accounts:
-            print '    exchange={0}\tBTC_balance={1}\tmoney_balance={2}\tbuy={3}'.format(
-                    a.name, round(a.stock_balance, 4), round(a.money_balance, 2), round(a.ticker.buy_price, 2))
+            self._logger.debug('\texchange={0}\tBTC_balance={1}\tmoney_balance={2}\tbuy={3}'.format(
+                    a.name, round(a.stock_balance, 4), round(a.money_balance, 2), round(a.ticker.buy_price, 2)))
         return accounts
 
     def _record_trade_lead(self, buy_exchange, buy_price, sell_exchange, sell_price):
@@ -60,28 +64,21 @@ class Advisor:
             session.add(tl)
             session.commit()
         except Exception as e:
-            print e
+            self._logger.error(e)
             session.rollback()
 
     def evaluate(self, accounts):
         try:
             return self._do_evaluate(accounts)
         except IOError as e:
-            print 'Network Error'
-            print e
+            self._logger.error('Network Error')
+            self._logger.error(e)
             return None
         except Exception as e:
-            print e
+            self._logger.error(e)
             return None
 
     def _do_evaluate(self, accounts):
-        #检查交易所账户余额 
-        for a in accounts:
-            if a.stock_balance < self.qty_per_order:
-                msg = 'The balance in exchange "{0}" is not enough'.format(a.name)
-                print msg
-                #TODO 去掉下面的注视
-                #raise RuntimeError(msg)
         #计算价格
         accounts = sorted(accounts, key=lambda e:e.ticker.buy_price)
         buy_account = accounts[0]
@@ -98,11 +95,14 @@ class Advisor:
         net_profit = round(sell_amount - buy_amount - wallet_transfer_fee_amount - trade_fee_amount, 2)
         profit_rate = net_profit / buy_amount
         threshold = config.configuration['profit_rate_threshold']
-        print '[ADVISOR]\tthreshold_rate={0}%\tgross_profit={1}\t\tnet_profit={2}\tprofit_rate={3}%'.format(
-                round(threshold * 100, 4), gross_profit, net_profit, round(profit_rate * 100, 4))
-        print '\tbuy_price={0}\tbuy_amount={1}\tsell_price={2}\tsell_amount={3}'.format(buy_price, buy_amount, sell_price, sell_amount)
-        print '\twallet_fee={0}\ttrade_fee={1}'.format(wallet_transfer_fee_amount, trade_fee_amount)
-        can_go = profit_rate > threshold and net_profit > 0.01 #and net_profit < 0.05
+        self._logger.debug('threshold_rate={0}%\tgross_profit={1}\t\tnet_profit={2}\tprofit_rate={3}%'.format(
+                round(threshold * 100, 4), gross_profit, net_profit, round(profit_rate * 100, 4)))
+        self._logger.debug('\tbuy_price={0}\tbuy_amount={1}\tsell_price={2}\tsell_amount={3}'.format(buy_price, buy_amount, sell_price, sell_amount))
+        self._logger.debug('\twallet_fee={0}\ttrade_fee={1}'.format(wallet_transfer_fee_amount, trade_fee_amount))
+        is_balance_ok = buy_account.money_balance > buy_amount and sell_account.stock_balance > sef.qty_per_order
+        if not is_balance_ok:
+            self._logger.warn('Balance is not enough')
+        can_go = is_balance_ok and profit_rate > threshold and net_profit > 0.01 #and net_profit < 0.05
         if can_go:
             self._record_trade_lead(
                     buy_account.name, buy_account.ticker.buy_price, 
@@ -110,5 +110,5 @@ class Advisor:
 
         s = Suggestion(can_go, buy_account, sell_account, buy_price, sell_price, self.qty_per_order)
         if s.can_go:
-            print '[ADVISOR]\tI FOUND A TRADE CHANCE:    TRADE IT NOW!!!'
+            self._logger.info('I FOUND A CHANCE AND I WILL TRADE IT NOW!!!')
         return s 

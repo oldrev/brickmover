@@ -116,7 +116,7 @@ class OKCoinExchange:
         return ticker
 
     def request_info(self):
-        _logger.info('准备开始请求 okcoin.com 帐号信息')
+        _logger.info(u'准备开始请求 okcoin.com 帐号信息')
         ticker = self.request_ticker()
         self.login()
         response = self.opener.open('https://www.okcoin.com/rechargeBtc.do')
@@ -243,7 +243,7 @@ class BtcChinaExchange:
         return ticker
 
     def request_info(self):
-        _logger.info('准备开始请求 btcchina.com 帐号信息')
+        _logger.info(u'准备开始请求 btcchina.com 帐号信息')
         self.login()
         ticker = self.request_ticker()
         ai = self._btcchina.get_account_info()
