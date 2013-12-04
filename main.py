@@ -1,26 +1,25 @@
 #!/bin/python
 #encoding: utf-8
 
+import os, sys
 import time
 import datetime
 import multiprocessing as mp
 import logging
 
-from info import *
-from exchanges import BtcChinaExchange, OKCoinExchange
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
+
+from info import *
 import models
 from advisor import Advisor
 from wallet import Wallet
+import exchanges
 
 _logger = logging.getLogger(__name__)
 
-
 class Trader:
-    _exchanges = {
-            BtcChinaExchange.Name: BtcChinaExchange(),
-            OKCoinExchange.Name: OKCoinExchange(),
-    }
+    _exchanges = exchanges.actived_exchanges 
 
     def __init__(self):
         self.current_order = None
@@ -41,7 +40,8 @@ class Trader:
             session.add(order)
             session.commit()
             return order
-        except:
+        except Exception as e:
+            _logger.error(e)
             session.rollback()
             return None
 
@@ -59,7 +59,8 @@ class Trader:
                 self.current_order.state = 'done'
                 _logger.info('[TRADER] The order is done!')
                 session.commit()
-        except:
+        except Exception as e:
+            _logger.error(e)
             session.rollback()
 
 
@@ -72,7 +73,8 @@ class Trader:
             self.current_order.is_bought = True
             session.commit()
             _logger.info('Buy Order made: {0}'.format(self.current_order.bought_time))
-        except:
+        except Exception as e:
+            _logger.error(e)
             session.rollback()
 
     def _make_sell_order(self):
@@ -84,7 +86,8 @@ class Trader:
             self.current_order.is_sold = True
             session.commit()
             _logger.info('Sell Order made: {0}'.format(self.current_order.sold_time))
-        except:
+        except Exception as e:
+            _logger.error(e)
             session.rollback()
 
     
@@ -97,10 +100,7 @@ class Trader:
 
 
 class Cashier:
-    _exchanges = {
-            BtcChinaExchange.Name: BtcChinaExchange(),
-            OKCoinExchange.Name: OKCoinExchange(),
-    }
+    _exchanges = exchanges.actived_exchanges 
 
     def __init__(self):
         self.wallet = Wallet()
@@ -160,7 +160,8 @@ def main_loop(stop_event):
             else:
                 _logger.info(u'交易条件不具备，等上一会儿....')
             wait_event(stop_event, 60)
-    except:
+    except Exception as e:
+        print e
         pass
     finally:
         the_advisor.close()

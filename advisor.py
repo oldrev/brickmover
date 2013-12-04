@@ -7,10 +7,10 @@ import multiprocessing as mp
 import logging
 
 from info import *
-from exchanges import BtcChinaExchange, OKCoinExchange
 import config
 import models
 from wallet import Wallet
+import exchanges
 
 
 def _polled_request_account_info(k):
@@ -25,10 +25,7 @@ def _polled_request_account_info(k):
         return None
 
 class Advisor:
-    _exchanges = {
-            BtcChinaExchange.Name: BtcChinaExchange(),
-            OKCoinExchange.Name: OKCoinExchange(),
-    }
+    _exchanges = exchanges.actived_exchanges
 
     def __init__(self):
         self._logger = logging.getLogger(__name__)
@@ -101,7 +98,7 @@ class Advisor:
         self._logger.debug('\twallet_fee={0}\ttrade_fee={1}'.format(wallet_transfer_fee_amount, trade_fee_amount))
         is_balance_ok = buy_account.money_balance > buy_amount and sell_account.stock_balance > sef.qty_per_order
         if not is_balance_ok:
-            self._logger.warn('Balance is not enough')
+            self._logger.warn(u'帐号余额不足')
         can_go = is_balance_ok and profit_rate > threshold and net_profit > 0.01 #and net_profit < 0.05
         if can_go:
             self._record_trade_lead(

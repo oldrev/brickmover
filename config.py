@@ -3,18 +3,15 @@
 import logging
 import logging.config
 import json
-import os
+import os.path
 
 logging.basicConfig()
 
-_CONFIG_FILE = 'brickmover.conf'
 
-
-def load_config():
-    with open(_CONFIG_FILE, 'r') as f:
+def load_config(cfg_path):
+    with open(cfg_path, 'r') as f:
         return json.loads(f.read()) 
 
-configuration = load_config()
 
 def config_logger():
     # set up logging to file - see previous section for more details
@@ -65,4 +62,6 @@ def config_logger():
     })
 
 
-config_logger()    
+cfg_path = os.path.join(os.getenv('HOME'), 'etc/brickmover.conf')
+configuration = load_config(cfg_path)
+config_logger()
